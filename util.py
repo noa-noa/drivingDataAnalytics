@@ -33,7 +33,7 @@ def request_O_CAR(car_id = 0):
         return
     jsonData = r["data"]
     csvData = json2csv(jsonData)
-    f = open(requestLoad[car_id]["car_name"]+"_"+requestLoad[car_id]["measurement_data_id"]+".csv","w")
+    f = open("data/"+requestLoad[car_id]["car_name"]+"_"+requestLoad[car_id]["measurement_data_id"]+".csv","w")
     f.write(csvData)
     len(csvData)
     f.close()
