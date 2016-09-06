@@ -6,33 +6,36 @@ import matplotlib.pyplot as plt
 import csv, json
 import math
 import pylab
+import glob
 ORG = {
-    'utime' : 'measurement_datetime',
+    'utime' : 'measurement_ms',
     'point' : {'x' :'longitude','y' : 'latitude'},
     'ay' : 'accel_y_longitudinal',
     'ax' : 'accel_x_transverse'
 }
+requestLoad = [
+    {"car_name":"patrol01",'measurement_data_id' : "20151030_162045", 'limit': 10000 },
+    {"car_name":"patrol01",'measurement_data_id' : "20151110_091224", 'limit': 10000 },
+    {"car_name":"patrol01",'measurement_data_id' : "20151112_124852", 'limit': 10000 },
+    {"car_name":"patrol01",'measurement_data_id' : "20151113_105429", 'limit': 10000 },
+    {"car_name":"patrol02",'measurement_data_id' : "20151027_083459", 'limit': 10000 },
+    {"car_name":"patrol02",'measurement_data_id' : "20151217_130656", 'limit': 10000 },
+    {"car_name":"patrol02",'measurement_data_id' : "20151218_083934", 'limit': 10000 }]
 
-def request_O_CAR(name,car_id = 1):
-    if car_id==1:
-        car_name = "patrol01"
-        car_data_id = "20151030_162045"
-    elif car_id==2:
-        car_name = "patrol02"
-        car_data_id = "20151027_083459"
+def request_O_CAR(car_id = 0):
 
     url = "http://www.data4citizen.jp/app/users/openDataOutput/json/get/O_CAR_TRAFFIC_DATA"
     #parameter = {'measurement_hour': 10, 'patrol_car_name': '237', 'limit': 100, 'measurement_date': '2014/02/28',"gps_error_meter" : 2}
-    parameter = {'car_name': car_name, 'measurement_data_id': car_data_id, 'limit': 10000 }
-
+    parameter = requestLoad[car_id]
+    print parameter
     r = requests.post(url,parameter).json()
     if str(r["result"]) == u"fail":
-        print("failed")
         return
     jsonData = r["data"]
     csvData = json2csv(jsonData)
-    f = open(name,"w")
+    f = open(requestLoad[car_id]["car_name"]+"_"+requestLoad[car_id]["measurement_data_id"]+".csv","w")
     f.write(csvData)
+    len(csvData)
     f.close()
 
 def json2csv(jsonData):
@@ -61,9 +64,15 @@ def plotMAP(jsonArray):
         x.append(float(r[ORG["point"]["x"]]))
         y.append(float(r[ORG["point"]["y"]]))
     plt.plot(x, y,alpha = 0.3)
+def plotMAP(jsonArray,axis):
+    x = list()
+    y = list()
+    for r in jsonArray:
+        x.append(float(r[ORG["point"]["x"]]))
+        y.append(float(r[ORG["point"]["y"]]))
+    axis.plot(x, y,alpha = 0.3)
 
-def sideAccelMAP(jsonArray):
-
+def AccelMAP(jsonArray):
     mx = list()
     my = list()
     px = list()
@@ -80,12 +89,31 @@ def sideAccelMAP(jsonArray):
     plt.scatter(mx, my, c= "blue",alpha = 0.1)
 
     plt.show()
-def accelPlot(jsonArray):
-    x = y = list()
+def timeAccelPlot(jsonArray):
+    x = list()
+    y = list()
     for i in jsonArray:
-        x.append(i[ORG["ay"]])
-        y.append(i[ORG["ax"]])
+        x.append(float(i[ORG["utime"]]))
+        y.append(float(i[ORG["ay"]]))
     plotScatter(x,y)
+
+def accelPlot(jsonArray):
+    x = list()
+    y = list()
+    for i in jsonArray:
+        x.append(float(i[ORG["ay"]]))
+        y.append(float(i[ORG["ax"]]))
+    plotScatter(x,y)
+
+def accelPlot(jsonArray,axis):
+    x = list()
+    y = list()
+    for i in jsonArray:
+        if 0.2 < math.fabs(float(i[ORG["ax"]])):
+            x.append(float(i[ORG["ay"]]))
+            y.append(float(i[ORG["ax"]]))
+    axis.plot(x, y,alpha = 0.3)
+
 def plotScatter(x,y):
     plt.scatter(x, y,alpha = 0.3)
 
@@ -120,21 +148,32 @@ def parse_and_float(name,data):
 def extracted_time(begin_utime,finish_utime,jsonArray,time_name = ORG["utime"]):
     result = []
     for i in jsonArray:
-        time = float(t[time_name])
+        time = float(i[time_name])
         if begin_utime < time and time < finish_utime:
             result.append(i)
     return result
-
+def getfiles():
+    files = glob.glob("*.csv")
+    fig,axis = plt.subplots(len(files),sharex = True,sharey=True)
+    for i in range(len(files)):
+        data = csv2jsonArray(files[i])
+        print(len(data))
+        accelPlot(data,axis[i])
+        #plotMAP(data,axis[i])
+    fig.show()
 if __name__ == '__main__':
-    request_O_CAR()
+    #request_O_CAR()
     #plot(result)
     #sideAccelPlot(result)
-    result = csv2jsonArray("some.csv")
-    x = parse_and_float(ORG["ay"],result)
-    y = parse_and_float(ORG["ax"],result)
 
-    plotScatter(x,y)
+    result = csv2jsonArray("patrol02_20151218_083934.csv")
+    timeAccelPlot(result)
+    plt.show()
+
+    resultw = csv2jsonArray("patrol01_20151030_162045.csv")
+    AccelPlot(resultw)
+    plt.show()
     bu = 1445902542940
-    fu = 1445902642942
+    fu = 1446189836007
     #extracted_time(bu,fu,result)
     #timePlot(fx,fy)
